@@ -8,6 +8,15 @@ const contributionSchema = new mongoose.Schema({
         required: [true, 'User is Required']
     },
 
+    // =========================
+    // Contribution Date
+    // =========================
+
+    date: {
+        type: Date,
+        required: [true, 'Contribution Date is Required']
+    },
+
     contributedTo: {
         type: String,
         required: [true, 'Contribution Purpose is Required']
@@ -38,4 +47,7 @@ const contributionSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('Contribution', contributionSchema);
+module.exports = mongoose.model(
+    'Contribution',
+    contributionSchema
+);

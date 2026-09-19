@@ -104,7 +104,6 @@ module.exports.registerUser = (req, res) => {
         .catch(err => errorHandler(err, req, res));
 };
 
-
 // User Login
 module.exports.loginUser = (req, res) => {
 
@@ -141,7 +140,6 @@ module.exports.loginUser = (req, res) => {
         .catch(err => errorHandler(err, req, res));
 };
 
-
 // Get User Profile
 module.exports.getProfile = (req, res) => {
 
@@ -156,7 +154,6 @@ module.exports.getProfile = (req, res) => {
             });
         });
 };
-
 
 // Google Login
 module.exports.googleLogin = async (req, res) => {
@@ -257,12 +254,9 @@ module.exports.googleLogin = async (req, res) => {
         });
 
     }
-
 };
 
 
-
-// Get All Users
 // Get All Users
 module.exports.getAllUsers = (req, res) => {
 
@@ -313,7 +307,6 @@ module.exports.getAllUsers = (req, res) => {
     .catch(err =>
         errorHandler(err, req, res)
     );
-
 };
 
 // Add Member
@@ -428,5 +421,4 @@ module.exports.addMember = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
-
 };

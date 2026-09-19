@@ -28,6 +28,11 @@ router.get(
     contributionController.getAllContributions
 );
 
+router.post(
+    "/report",
+    contributionController.createReport
+);
+
 
 router.get(
     '/collection-types',
