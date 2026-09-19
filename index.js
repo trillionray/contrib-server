@@ -47,7 +47,17 @@ db.once("open", ()=> console.log("We're connected to the cloud database"));
 app.use(express.json());
 // app.use(express.urlencoded({extended:true}));
 
+app.get("/wake", (req, res) => {
 
+    console.log("Wake request received");
+
+    res.status(200).json({
+        success: true,
+        message: "Server is awake",
+        time: new Date()
+    });
+
+});
 app.use("/users", userRoutes);
 app.use("/contributions", contributionRoutes);
 // app.use("/items", itemRoutes);
