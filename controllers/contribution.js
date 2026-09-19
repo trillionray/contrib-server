@@ -183,13 +183,9 @@ module.exports.getAllAvailableContributions = (req, res) => {
         // Join User collection
         {
             $lookup: {
-
                 from: "users",
-
                 localField: "user",
-
                 foreignField: "_id",
-
                 as: "user"
 
             }
@@ -284,7 +280,7 @@ module.exports.getAllAvailableContributions = (req, res) => {
     ])
 
     .then(result => {
-
+        console.log(result)
         return res.status(200).send(result);
 
     })
@@ -564,6 +560,98 @@ module.exports.getDistinctContributedTo = (req, res) => {
                 _id: 0,
 
                 contributedTo: 1
+
+            }
+
+        }
+
+    ])
+
+        .then(result => {
+
+            return res.status(200).send(result);
+
+        })
+
+        .catch(err =>
+            errorHandler(err, req, res)
+        );
+
+};
+
+
+// Get All Distinct Collection Types
+module.exports.getDistinctCollectionTypes = (req, res) => {
+
+    return Contribution.aggregate([
+
+        // Ignore empty values
+        {
+            $match: {
+
+                collectionType: {
+
+                    $exists: true,
+
+                    $ne: ""
+
+                }
+
+            }
+
+        },
+
+
+        // Group regardless of casing
+        {
+            $group: {
+
+                _id: {
+
+                    $toLower: {
+
+                        $trim: {
+
+                            input:
+                                "$collectionType"
+
+                        }
+
+                    }
+
+                },
+
+                // Keep the first original casing
+                collectionType: {
+
+                    $first:
+                        "$collectionType"
+
+                }
+
+            }
+
+        },
+
+
+        // Sort alphabetically
+        {
+            $sort: {
+
+                collectionType: 1
+
+            }
+
+        },
+
+
+        // Return only collectionType
+        {
+            $project: {
+
+                _id: 0,
+
+                collectionType: 1
 
             }
 

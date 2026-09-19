@@ -29,6 +29,10 @@ router.get(
 );
 
 
+router.get(
+    '/collection-types',
+    contributionController.getDistinctCollectionTypes
+);
 
 // Get Distinct Contribution Purposes
 router.get(
