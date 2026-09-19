@@ -31,7 +31,7 @@ router.get(
 
 // Add Member
 router.post(
-    '/add-member',
+    '/add-member', 
     userController.addMember
 );
 

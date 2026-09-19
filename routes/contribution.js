@@ -2,6 +2,8 @@ const express = require('express');
 
 const contributionController =
     require('../controllers/contribution');
+const { verify, verifyAdmin } = require("../auth");
+
 
 const router = express.Router();
 
@@ -15,7 +17,7 @@ router.post(
 
 // Get All Contributions
 router.get(
-    '/all',
+    '/all', verify, verifyAdmin,
     contributionController.getAllContributions
 );
 
