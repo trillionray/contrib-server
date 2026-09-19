@@ -13,6 +13,11 @@ const contributionSchema = new mongoose.Schema({
         required: [true, 'Contribution Purpose is Required']
     },
 
+    collectionType: {
+        type: String,
+        required: [true, 'Collection Type is Required']
+    },
+
     description: {
         type: String,
         required: [true, 'Description is Required']
@@ -22,6 +27,11 @@ const contributionSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Amount is Required'],
         min: [0, 'Amount cannot be negative']
+    },
+
+    isDataAvailable: {
+        type: Boolean,
+        default: true
     }
 
 }, {

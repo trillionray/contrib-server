@@ -263,19 +263,58 @@ module.exports.googleLogin = async (req, res) => {
 
 
 // Get All Users
+// Get All Users
 module.exports.getAllUsers = (req, res) => {
 
-    return User.find()
-        .select('-password')
-        .sort({ fullName: 1 })
-        .then(result => {
+    return User.aggregate([
 
-            return res.status(200).send(result);
+        // Sort users with User ID first,
+        // then users without User ID last
+        {
+            $addFields: {
+                userIdSort: {
+                    $cond: [
+                        {
+                            $or: [
+                                { $eq: ["$userId", null] },
+                                { $not: ["$userId"] }
+                            ]
+                        },
+                        1,
+                        0
+                    ]
+                }
+            }
+        },
 
-        })
-        .catch(err => errorHandler(err, req, res));
+        {
+            $sort: {
+                userIdSort: 1,
+                userId: 1
+            }
+        },
+
+        // Remove password
+        {
+            $project: {
+                password: 0,
+                userIdSort: 0
+            }
+        }
+
+    ])
+
+    .then(result => {
+
+        return res.status(200).send(result);
+
+    })
+
+    .catch(err =>
+        errorHandler(err, req, res)
+    );
+
 };
-
 
 // Add Member
 // Add Member

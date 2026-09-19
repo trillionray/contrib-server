@@ -8,6 +8,13 @@ const { verify, verifyAdmin } = require("../auth");
 const router = express.Router();
 
 
+router.get(
+    '/', verify, verifyAdmin,
+    contributionController.getAllAvailableContributions
+);
+
+
+
 // Create Contribution
 router.post(
     '/create',
@@ -20,6 +27,7 @@ router.get(
     '/all', verify, verifyAdmin,
     contributionController.getAllContributions
 );
+
 
 
 // Get Distinct Contribution Purposes
