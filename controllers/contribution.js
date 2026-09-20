@@ -312,7 +312,6 @@ module.exports.getAllAvailableContributions = (req, res) => {
 };
 
 
-// Create Contribution Report
 module.exports.createReport = async (req, res) => {
 
     try {
@@ -361,19 +360,17 @@ module.exports.createReport = async (req, res) => {
         const contributedTo =
             getBodyValue("contributedTo");
 
+        const groupBy =
+            getBodyValue("groupBy");
+
 
         console.log(
-
             name,
-
             startDate,
-
             endDate,
-
             collectionType,
-
-            contributedTo
-
+            contributedTo,
+            groupBy
         );
 
 
@@ -440,6 +437,32 @@ module.exports.createReport = async (req, res) => {
             });
 
         }
+
+
+        // =========================
+        // Validate Group By
+        // =========================
+
+        const allowedGroupBy = [
+
+            "user",
+
+            "contributedTo",
+
+            "collectionType",
+
+            "date-user"
+
+        ];
+
+
+        const selectedGroupBy =
+            typeof groupBy === "string" &&
+            allowedGroupBy.includes(
+                groupBy.trim()
+            )
+                ? groupBy.trim()
+                : "";
 
 
         // =========================
@@ -622,8 +645,6 @@ module.exports.createReport = async (req, res) => {
                     _id:
                         contribution._id,
 
-                    // IMPORTANT:
-                    // Use contribution date
                     date:
                         contribution.date,
 
@@ -669,6 +690,262 @@ module.exports.createReport = async (req, res) => {
 
 
         // =========================
+        // Group Contributions
+        // =========================
+
+        const groups = {};
+
+
+        if (selectedGroupBy) {
+
+            report.forEach(
+                contribution => {
+
+                    let key;
+                    let groupLabel;
+
+
+                    // =========================
+                    // Group By User
+                    // =========================
+
+                    if (
+                        selectedGroupBy ===
+                        "user"
+                    ) {
+
+                        key =
+                            contribution.user?._id
+                                ?.toString() ||
+                            "unknown";
+
+                        groupLabel =
+                            contribution.user?.fullName ||
+                            "Unknown User";
+
+                    }
+
+
+                    // =========================
+                    // Group By Contributed To
+                    // =========================
+
+                    else if (
+                        selectedGroupBy ===
+                        "contributedTo"
+                    ) {
+
+                        const value =
+                            contribution.contributedTo ||
+                            "Unspecified";
+
+                        key =
+                            value
+                                .trim()
+                                .toLowerCase();
+
+                        groupLabel =
+                            value;
+
+                    }
+
+
+                    // =========================
+                    // Group By Collection Type
+                    // =========================
+
+                    else if (
+                        selectedGroupBy ===
+                        "collectionType"
+                    ) {
+
+                        const value =
+                            contribution.collectionType ||
+                            "Unspecified";
+
+                        key =
+                            value
+                                .trim()
+                                .toLowerCase();
+
+                        groupLabel =
+                            value;
+
+                    }
+
+
+                    // =========================
+                    // Group By Date + User
+                    // =========================
+
+                    else if (
+                        selectedGroupBy ===
+                        "date-user"
+                    ) {
+
+                        const date =
+                            new Date(
+                                contribution.date
+                            );
+
+
+                        const dateKey =
+                            new Intl.DateTimeFormat(
+                                "en-CA",
+                                {
+                                    timeZone:
+                                        "Asia/Manila",
+                                    year:
+                                        "numeric",
+                                    month:
+                                        "2-digit",
+                                    day:
+                                        "2-digit"
+                                }
+                            ).format(date);
+
+
+                        const userId =
+                            contribution.user?._id
+                                ?.toString() ||
+                            "unknown";
+
+
+                        key =
+                            `${dateKey}-${userId}`;
+
+
+                        groupLabel =
+                            contribution.user?.fullName ||
+                            "Unknown User";
+
+                    }
+
+
+                    // =========================
+                    // Create Group
+                    // =========================
+
+                    if (!groups[key]) {
+
+                        groups[key] = {
+
+                            key,
+
+                            groupBy:
+                                selectedGroupBy,
+
+                            groupLabel,
+
+                            user:
+                                contribution.user
+                                    ? {
+
+                                        _id:
+                                            contribution.user._id,
+
+                                        userId:
+                                            contribution.user.userId,
+
+                                        fullName:
+                                            contribution.user.fullName
+
+                                    }
+                                    : null,
+
+                            date:
+                                selectedGroupBy ===
+                                "date-user"
+                                    ? contribution.date
+                                    : null,
+
+                            contributedTo:
+                                selectedGroupBy ===
+                                "contributedTo"
+                                    ? contribution.contributedTo
+                                    : null,
+
+                            collectionType:
+                                selectedGroupBy ===
+                                "collectionType"
+                                    ? contribution.collectionType
+                                    : null,
+
+                            contributions: [],
+
+                            totalAmount: 0
+
+                        };
+
+                    }
+
+
+                    // =========================
+                    // Add Contribution
+                    // =========================
+
+                    groups[key]
+                        .contributions
+                        .push(
+                            contribution
+                        );
+
+
+                    // =========================
+                    // Add Amount
+                    // =========================
+
+                    groups[key]
+                        .totalAmount +=
+                        Number(
+                            contribution.amount
+                        ) || 0;
+
+                }
+            );
+
+        }
+
+
+        // =========================
+        // Convert Groups To Array
+        // =========================
+
+        let groupedReport =
+            Object.values(
+                groups
+            );
+
+
+        // =========================
+        // Sort Groups
+        // =========================
+
+        if (
+            selectedGroupBy ===
+            "date-user"
+        ) {
+
+            groupedReport.sort(
+                (a, b) =>
+                    new Date(a.date) -
+                    new Date(b.date)
+            );
+
+        } else {
+
+            groupedReport.sort(
+                (a, b) =>
+                    a.groupLabel
+                        .localeCompare(
+                            b.groupLabel
+                        )
+            );
+
+        }
+
+
+        // =========================
         // Response
         // =========================
 
@@ -689,7 +966,10 @@ module.exports.createReport = async (req, res) => {
                     collectionType || null,
 
                 contributedTo:
-                    contributedTo || null
+                    contributedTo || null,
+
+                groupBy:
+                    selectedGroupBy || null
 
             },
 
@@ -698,8 +978,14 @@ module.exports.createReport = async (req, res) => {
 
             totalAmount,
 
+            groupBy:
+                selectedGroupBy || null,
+
             contributions:
-                report
+                report,
+
+            groups:
+                groupedReport
 
         });
 
