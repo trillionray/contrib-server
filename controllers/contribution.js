@@ -1,4 +1,5 @@
 const Contribution = require('../models/Contribution');
+const User = require('../models/User');
 
 const { errorHandler } = require('../auth');
 
@@ -52,7 +53,6 @@ module.exports.createContribution = (req, res) => {
             errorHandler(err, req, res)
         );
 };
-
 
 // Get All Contributions
 module.exports.getAllContributions = (req, res) => {
@@ -170,7 +170,6 @@ module.exports.getAllContributions = (req, res) => {
         errorHandler(err, req, res)
     );
 };
-
 
 // Get All Available Contributions
 module.exports.getAllAvailableContributions = (req, res) => {
@@ -310,7 +309,6 @@ module.exports.getAllAvailableContributions = (req, res) => {
         errorHandler(err, req, res)
     );
 };
-
 
 module.exports.createReport = async (req, res) => {
 
@@ -1005,9 +1003,7 @@ module.exports.createReport = async (req, res) => {
         );
 
     }
-
 };
-
 
 // Get Contribution by ID
 module.exports.getContribution = (req, res) => {
@@ -1044,9 +1040,7 @@ module.exports.getContribution = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
-
 };
-
 
 // Get Contributions by User
 module.exports.getUserContributions = (req, res) => {
@@ -1078,9 +1072,7 @@ module.exports.getUserContributions = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
-
 };
-
 
 // Update Contribution
 module.exports.updateContribution = (req, res) => {
@@ -1260,32 +1252,22 @@ module.exports.updateContribution = (req, res) => {
                 res
             )
         );
-
 };
-
 
 // Archive Contribution
 module.exports.deleteContribution = (req, res) => {
-
     return Contribution.findByIdAndUpdate(
-
         req.params.contributionId,
-
         {
 
             isDataAvailable:
                 false
 
         },
-
         {
-
             new: true
-
         }
-
     )
-
         .then(result => {
 
             if (!result) {
@@ -1316,7 +1298,6 @@ module.exports.deleteContribution = (req, res) => {
             errorHandler(err, req, res)
         );
 };
-
 
 // Get All Distinct Contribution Purposes
 module.exports.getDistinctContributedTo = (req, res) => {
@@ -1408,9 +1389,7 @@ module.exports.getDistinctContributedTo = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
-
 };
-
 
 // Get All Distinct Collection Types
 module.exports.getDistinctCollectionTypes = (req, res) => {
@@ -1499,5 +1478,261 @@ module.exports.getDistinctCollectionTypes = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
+};
 
+
+// Get All Users With Their Contributions
+// Includes users with zero contributions
+module.exports.getAllUsersWithContributions = async (req, res) => {
+
+    try {
+
+        const {
+            startDate,
+            endDate
+        } = req.query;
+
+
+        // =====================================
+        // Build Date Filter
+        // =====================================
+
+        const dateFilter = {};
+
+
+        if (startDate) {
+
+            // Start of the selected date in Philippine time
+            dateFilter.$gte = new Date(
+                `${startDate}T00:00:00+08:00`
+            );
+
+        }
+
+
+        if (endDate) {
+
+            // End of the selected date in Philippine time
+            dateFilter.$lte = new Date(
+                `${endDate}T23:59:59.999+08:00`
+            );
+
+        }
+
+
+        // =====================================
+        // Contribution Match Conditions
+        // =====================================
+
+        const contributionMatch = {
+
+            $expr: {
+
+                $and: [
+
+                    // Contribution belongs to this user
+                    {
+                        $eq: [
+                            "$user",
+                            "$$userId"
+                        ]
+                    },
+
+                    // Only available contributions
+                    {
+                        $eq: [
+                            "$isDataAvailable",
+                            true
+                        ]
+                    }
+
+                ]
+
+            }
+
+        };
+
+
+        // =====================================
+        // Add Date Filter If Provided
+        // =====================================
+
+        if (
+            startDate ||
+            endDate
+        ) {
+
+            contributionMatch.date =
+                dateFilter;
+
+        }
+
+
+        const users = await User.aggregate([
+
+            // =====================================
+            // Join Contributions
+            // =====================================
+
+            {
+                $lookup: {
+
+                    from: "contributions",
+
+                    let: {
+                        userId: "$_id"
+                    },
+
+                    pipeline: [
+
+                        // =====================================
+                        // Filter Contributions
+                        // =====================================
+
+                        {
+                            $match:
+                                contributionMatch
+                        },
+
+
+                        // =====================================
+                        // Sort Newest Contribution Date First
+                        // =====================================
+
+                        {
+                            $sort: {
+                                date: -1
+                            }
+                        }
+
+                    ],
+
+                    as: "contributions"
+
+                }
+
+            },
+
+
+            // =====================================
+            // Calculate Contribution Summary
+            // =====================================
+
+            {
+                $addFields: {
+
+                    contributionCount: {
+                        $size:
+                            "$contributions"
+                    },
+
+                    totalContribution: {
+
+                        $sum:
+                            "$contributions.amount"
+
+                    }
+
+                }
+
+            },
+
+
+            // =====================================
+            // Sort Users
+            // =====================================
+            // Users with User ID first,
+            // then User ID ascending
+
+            {
+                $addFields: {
+
+                    userIdSort: {
+
+                        $cond: [
+
+                            {
+                                $or: [
+
+                                    {
+                                        $eq: [
+                                            "$userId",
+                                            null
+                                        ]
+                                    },
+
+                                    {
+                                        $not: [
+                                            "$userId"
+                                        ]
+                                    }
+
+                                ]
+                            },
+
+                            1,
+
+                            0
+
+                        ]
+
+                    }
+
+                }
+
+            },
+
+
+            {
+                $sort: {
+
+                    userIdSort: 1,
+
+                    userId: 1,
+
+                    fullName: 1
+
+                }
+
+            },
+
+
+            // =====================================
+            // Remove Sensitive / Temporary Fields
+            // =====================================
+
+            {
+                $project: {
+
+                    password: 0,
+
+                    userIdSort: 0,
+
+                    "contributions.user.password": 0
+
+                }
+
+            }
+
+        ]);
+
+
+        return res.status(200).send(users);
+
+
+    } catch (err) {
+
+        console.error(
+            "Get all users with contributions error:",
+            err
+        );
+
+
+        return errorHandler(
+            err,
+            req,
+            res
+        );
+
+    }
 };

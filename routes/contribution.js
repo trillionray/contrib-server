@@ -52,6 +52,10 @@ router.get(
     contributionController.getUserContributions
 );
 
+router.get(
+    '/users',
+    contributionController.getAllUsersWithContributions
+);
 
 // Get Contribution by ID
 router.get(
@@ -72,6 +76,9 @@ router.delete(
     '/:contributionId',
     contributionController.deleteContribution
 );
+
+
+
 
 
 module.exports = router;
