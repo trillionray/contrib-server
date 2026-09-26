@@ -35,4 +35,10 @@ router.post(
     userController.addMember
 );
 
+
+router.put(
+    "/:id",
+    userController.updateMember
+);
+
 module.exports = router;

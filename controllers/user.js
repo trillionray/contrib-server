@@ -39,7 +39,6 @@ module.exports.checkEmailIfNotExist = (req, res) => {
         .catch(err => errorHandler(err, req, res));
 };
 
-
 // User Registration
 module.exports.registerUser = (req, res) => {
 
@@ -310,7 +309,6 @@ module.exports.getAllUsers = (req, res) => {
 };
 
 // Add Member
-// Add Member
 module.exports.addMember = (req, res) => {
 
     // Designation is required
@@ -421,4 +419,236 @@ module.exports.addMember = (req, res) => {
         .catch(err =>
             errorHandler(err, req, res)
         );
+};
+
+// Update Member
+module.exports.updateMember = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        const {
+            userId,
+            fullName,
+            email,
+            designation
+        } = req.body;
+
+
+        // ---------------------------------------------
+        // Validation
+        // ---------------------------------------------
+
+        // Full Name is required
+        if (!fullName || !fullName.trim()) {
+
+            return res.status(400).send({
+                message: "Full Name is Required"
+            });
+
+        }
+
+
+        // Designation is required
+        if (!designation || !designation.trim()) {
+
+            return res.status(400).send({
+                message: "Designation is Required"
+            });
+
+        }
+
+
+        // User ID is optional
+        if (
+            userId !== undefined &&
+            userId !== null &&
+            userId !== ""
+        ) {
+
+            if (!Number.isInteger(Number(userId))) {
+
+                return res.status(400).send({
+                    message: "User ID must be a whole number"
+                });
+
+            }
+
+        }
+
+
+        // Email is optional
+        if (
+            email !== undefined &&
+            email !== null &&
+            email !== ""
+        ) {
+
+            if (!email.includes("@")) {
+
+                return res.status(400).send({
+                    message: "Invalid email format"
+                });
+
+            }
+
+        }
+
+
+        // ---------------------------------------------
+        // Find Existing User
+        // ---------------------------------------------
+
+        const existingUser =
+            await User.findById(id);
+
+        if (!existingUser) {
+
+            return res.status(404).send({
+                message: "User not found"
+            });
+
+        }
+
+
+        // ---------------------------------------------
+        // Check Duplicate User ID
+        // ---------------------------------------------
+
+        if (
+            userId !== undefined &&
+            userId !== null &&
+            userId !== ""
+        ) {
+
+            const duplicateUserId =
+                await User.findOne({
+                    userId: Number(userId),
+                    _id: { $ne: id }
+                });
+
+            if (duplicateUserId) {
+
+                return res.status(409).send({
+                    message: "Duplicate User ID found"
+                });
+
+            }
+
+        }
+
+
+        // ---------------------------------------------
+        // Check Duplicate Email
+        // ---------------------------------------------
+
+        if (
+            email !== undefined &&
+            email !== null &&
+            email !== ""
+        ) {
+
+            const duplicateEmail =
+                await User.findOne({
+                    email: email,
+                    _id: { $ne: id }
+                });
+
+            if (duplicateEmail) {
+
+                return res.status(409).send({
+                    message: "Duplicate email found"
+                });
+
+            }
+
+        }
+
+
+        // ---------------------------------------------
+        // Update Fields
+        // ---------------------------------------------
+
+        existingUser.fullName =
+            fullName.trim();
+
+        existingUser.designation =
+            designation.trim();
+
+
+        // User ID
+        if (
+            userId === undefined ||
+            userId === null ||
+            userId === ""
+        ) {
+
+            // Remove User ID if cleared
+            existingUser.userId = undefined;
+
+        } else {
+
+            existingUser.userId =
+                Number(userId);
+
+        }
+
+
+        // Email
+        if (
+            email === undefined ||
+            email === null ||
+            email.trim() === ""
+        ) {
+
+            // Remove email if cleared
+            existingUser.email = undefined;
+
+        } else {
+
+            existingUser.email =
+                email.trim();
+
+        }
+
+
+        // ---------------------------------------------
+        // Save
+        // ---------------------------------------------
+
+        const updatedUser =
+            await existingUser.save();
+
+
+        // ---------------------------------------------
+        // Remove Password From Response
+        // ---------------------------------------------
+
+        const userResponse =
+            updatedUser.toObject();
+
+        delete userResponse.password;
+
+
+        return res.status(200).send(
+            userResponse
+        );
+
+
+    } catch (err) {
+
+        console.error(
+            "Update member error:",
+            err
+        );
+
+        return errorHandler(
+            err,
+            req,
+            res
+        );
+
+    }
+
 };
