@@ -7,6 +7,9 @@ const contributionSchema = new mongoose.Schema({
         ref: 'User',
         required: [true, 'User is Required']
     },
+    crNumber: {
+        type: String
+    },
 
     // =========================
     // Contribution Date

@@ -12,9 +12,8 @@ module.exports.createContribution = (req, res) => {
         user:
             req.body.user,
 
-        // =========================
-        // Contribution Date
-        // =========================
+        crNumber:
+            req.body.crNumber,
 
         date:
             req.body.date
@@ -34,9 +33,6 @@ module.exports.createContribution = (req, res) => {
 
         amount:
             req.body.amount
-
-        // isDataAvailable is not required
-        // Mongoose will use the default value: true
 
     });
 
@@ -643,6 +639,10 @@ module.exports.createReport = async (req, res) => {
                     _id:
                         contribution._id,
 
+                    crNumber:
+                        contribution.crNumber,
+
+                        
                     date:
                         contribution.date,
 
@@ -1092,6 +1092,20 @@ module.exports.updateContribution = (req, res) => {
             req.body.user;
 
     }
+
+
+    // =========================
+       // CR Number
+       // =========================
+
+       if (
+           req.body.crNumber !== undefined
+       ) {
+
+           updates.crNumber =
+               req.body.crNumber;
+
+       }
 
 
     // =========================
