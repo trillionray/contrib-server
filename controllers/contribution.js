@@ -342,6 +342,9 @@ module.exports.createReport = async (req, res) => {
         const name =
             getBodyValue("name");
 
+        const crNumber =
+            getBodyValue("crNumber");
+
         const startDate =
             getBodyValue("startDate");
 
@@ -360,6 +363,7 @@ module.exports.createReport = async (req, res) => {
 
         console.log(
             name,
+            crNumber,
             startDate,
             endDate,
             collectionType,
@@ -439,6 +443,8 @@ module.exports.createReport = async (req, res) => {
 
         const allowedGroupBy = [
 
+            "crNumber",
+
             "user",
 
             "contributedTo",
@@ -481,8 +487,40 @@ module.exports.createReport = async (req, res) => {
 
 
         // =========================
+        // CR Number
+        // Exact Match
+        // Case-insensitive
+        // =========================
+
+        if (
+
+            typeof crNumber ===
+            "string" &&
+
+            crNumber.trim()
+
+        ) {
+
+            query.crNumber = {
+
+                $regex:
+                    `^${crNumber.trim().replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        "\\$&"
+                    )}$`,
+
+                $options:
+                    "i"
+
+            };
+
+        }
+
+
+        // =========================
         // Collection Type
         // Case-insensitive
+        // Partial Match
         // =========================
 
         if (
@@ -510,6 +548,7 @@ module.exports.createReport = async (req, res) => {
         // =========================
         // Contributed To
         // Case-insensitive
+        // Partial Match
         // =========================
 
         if (
@@ -642,7 +681,6 @@ module.exports.createReport = async (req, res) => {
                     crNumber:
                         contribution.crNumber,
 
-                        
                     date:
                         contribution.date,
 
@@ -702,7 +740,31 @@ module.exports.createReport = async (req, res) => {
                     let key;
                     let groupLabel;
 
+                    // =========================
+                    // Group By CR Number
+                    // =========================
 
+                    if (
+                        selectedGroupBy ===
+                        "crNumber"
+                    ) {
+
+                        const value =
+                            contribution.crNumber ||
+                            "Unspecified";
+
+
+                        key =
+                            value
+                                .trim()
+                                .toLowerCase();
+
+
+                        groupLabel =
+                            value;
+
+                    }
+                    
                     // =========================
                     // Group By User
                     // =========================
@@ -737,10 +799,12 @@ module.exports.createReport = async (req, res) => {
                             contribution.contributedTo ||
                             "Unspecified";
 
+
                         key =
                             value
                                 .trim()
                                 .toLowerCase();
+
 
                         groupLabel =
                             value;
@@ -761,10 +825,12 @@ module.exports.createReport = async (req, res) => {
                             contribution.collectionType ||
                             "Unspecified";
 
+
                         key =
                             value
                                 .trim()
                                 .toLowerCase();
+
 
                         groupLabel =
                             value;
@@ -791,16 +857,23 @@ module.exports.createReport = async (req, res) => {
                             new Intl.DateTimeFormat(
                                 "en-CA",
                                 {
+
                                     timeZone:
                                         "Asia/Manila",
+
                                     year:
                                         "numeric",
+
                                     month:
                                         "2-digit",
+
                                     day:
                                         "2-digit"
+
                                 }
-                            ).format(date);
+                            ).format(
+                                date
+                            );
 
 
                         const userId =
@@ -954,6 +1027,9 @@ module.exports.createReport = async (req, res) => {
                 name:
                     name || null,
 
+                crNumber:
+                    crNumber || null,
+
                 startDate:
                     start,
 
@@ -1003,6 +1079,7 @@ module.exports.createReport = async (req, res) => {
         );
 
     }
+
 };
 
 // Get Contribution by ID
