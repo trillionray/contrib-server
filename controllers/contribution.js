@@ -15,6 +15,11 @@ module.exports.createContribution = (req, res) => {
         crNumber:
             req.body.crNumber,
 
+        numberOfParticipants:
+            req.body.numberOfParticipants !== undefined
+                ? Number(req.body.numberOfParticipants)
+                : 1,
+
         date:
             req.body.date
                 ? new Date(
@@ -376,54 +381,58 @@ module.exports.createReport = async (req, res) => {
         // Validate Dates
         // =========================
 
-        if (
-            !startDate ||
-            !endDate
-        ) {
+        let start = null;
 
-            return res.status(400).send({
-
-                message:
-                    "Start date and end date are required."
-
-            });
-
-        }
+        let end = null;
 
 
-        // =========================
-        // Date Range
-        // =========================
-        // Philippine time (UTC+8)
+        if (startDate) {
 
-        const start =
-            new Date(
-                `${startDate}T00:00:00+08:00`
-            );
+            start =
+                new Date(
+                    `${startDate}T00:00:00+08:00`
+                );
 
 
-        const end =
-            new Date(
-                `${endDate}T23:59:59.999+08:00`
-            );
+            if (isNaN(start.getTime())) {
 
+                return res.status(400).send({
 
-        if (
-            isNaN(start.getTime()) ||
-            isNaN(end.getTime())
-        ) {
+                    message:
+                        "Invalid start date."
 
-            return res.status(400).send({
+                });
 
-                message:
-                    "Invalid date range."
-
-            });
+            }
 
         }
 
 
+        if (endDate) {
+
+            end =
+                new Date(
+                    `${endDate}T23:59:59.999+08:00`
+                );
+
+
+            if (isNaN(end.getTime())) {
+
+                return res.status(400).send({
+
+                    message:
+                        "Invalid end date."
+
+                });
+
+            }
+
+        }
+
+
         if (
+            start &&
+            end &&
             start > end
         ) {
 
@@ -473,17 +482,38 @@ module.exports.createReport = async (req, res) => {
 
             isDataAvailable: {
                 $ne: false
-            },
-
-            date: {
-
-                $gte: start,
-
-                $lte: end
-
             }
 
         };
+
+
+        if (start) {
+
+            query.date = {
+
+                $gte:
+                    start
+
+            };
+
+        }
+
+
+        if (end) {
+
+            query.date = {
+
+                ...(
+                    query.date ||
+                    {}
+                ),
+
+                $lte:
+                    end
+
+            };
+
+        }
 
 
         // =========================
@@ -493,12 +523,8 @@ module.exports.createReport = async (req, res) => {
         // =========================
 
         if (
-
-            typeof crNumber ===
-            "string" &&
-
+            typeof crNumber === "string" &&
             crNumber.trim()
-
         ) {
 
             query.crNumber = {
@@ -524,12 +550,8 @@ module.exports.createReport = async (req, res) => {
         // =========================
 
         if (
-
-            typeof collectionType ===
-            "string" &&
-
+            typeof collectionType === "string" &&
             collectionType.trim()
-
         ) {
 
             query.collectionType = {
@@ -552,12 +574,8 @@ module.exports.createReport = async (req, res) => {
         // =========================
 
         if (
-
-            typeof contributedTo ===
-            "string" &&
-
+            typeof contributedTo === "string" &&
             contributedTo.trim()
-
         ) {
 
             query.contributedTo = {
@@ -600,12 +618,8 @@ module.exports.createReport = async (req, res) => {
         // =========================
 
         if (
-
-            typeof name ===
-            "string" &&
-
+            typeof name === "string" &&
             name.trim()
-
         ) {
 
             const searchName =
@@ -639,7 +653,7 @@ module.exports.createReport = async (req, res) => {
 
 
         // =========================
-        // Calculate Total
+        // Calculate Total Amount
         // =========================
 
         const totalAmount =
@@ -657,6 +671,37 @@ module.exports.createReport = async (req, res) => {
                         Number(
                             contribution.amount
                         ) || 0
+
+                    );
+
+                },
+
+                0
+
+            );
+
+
+        // =========================
+        // Calculate Total Participants
+        // =========================
+
+        const totalParticipants =
+            contributions.reduce(
+
+                (
+                    total,
+                    contribution
+                ) => {
+
+                    return (
+
+                        total +
+
+                        (
+                            Number(
+                                contribution.numberOfParticipants
+                            ) || 1
+                        )
 
                     );
 
@@ -706,6 +751,11 @@ module.exports.createReport = async (req, res) => {
                             }
                             : null,
 
+                    numberOfParticipants:
+                        Number(
+                            contribution.numberOfParticipants
+                        ) || 1,
+
                     contributedTo:
                         contribution.contributedTo,
 
@@ -740,6 +790,7 @@ module.exports.createReport = async (req, res) => {
                     let key;
                     let groupLabel;
 
+
                     // =========================
                     // Group By CR Number
                     // =========================
@@ -764,7 +815,8 @@ module.exports.createReport = async (req, res) => {
                             value;
 
                     }
-                    
+
+
                     // =========================
                     // Group By User
                     // =========================
@@ -944,7 +996,11 @@ module.exports.createReport = async (req, res) => {
 
                             contributions: [],
 
-                            totalAmount: 0
+                            totalParticipants:
+                                0,
+
+                            totalAmount:
+                                0
 
                         };
 
@@ -960,6 +1016,17 @@ module.exports.createReport = async (req, res) => {
                         .push(
                             contribution
                         );
+
+
+                    // =========================
+                    // Add Participants
+                    // =========================
+
+                    groups[key]
+                        .totalParticipants +=
+                        Number(
+                            contribution.numberOfParticipants
+                        ) || 1;
 
 
                     // =========================
@@ -1049,6 +1116,8 @@ module.exports.createReport = async (req, res) => {
 
             count:
                 report.length,
+
+            totalParticipants,
 
             totalAmount,
 
@@ -1172,17 +1241,33 @@ module.exports.updateContribution = (req, res) => {
 
 
     // =========================
-       // CR Number
-       // =========================
+    // CR Number
+    // =========================
 
-       if (
-           req.body.crNumber !== undefined
-       ) {
+    if (
+        req.body.crNumber !== undefined
+    ) {
 
-           updates.crNumber =
-               req.body.crNumber;
+        updates.crNumber =
+            req.body.crNumber;
 
-       }
+    }
+
+
+    // =========================
+    // Number Of Participants
+    // =========================
+
+    if (
+        req.body.numberOfParticipants !== undefined
+    ) {
+
+        updates.numberOfParticipants =
+            Number(
+                req.body.numberOfParticipants
+            );
+
+    }
 
 
     // =========================
@@ -1593,7 +1678,6 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
 
         if (startDate) {
 
-            // Start of the selected date in Philippine time
             dateFilter.$gte = new Date(
                 `${startDate}T00:00:00+08:00`
             );
@@ -1603,7 +1687,6 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
 
         if (endDate) {
 
-            // End of the selected date in Philippine time
             dateFilter.$lte = new Date(
                 `${endDate}T23:59:59.999+08:00`
             );
@@ -1621,7 +1704,6 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
 
                 $and: [
 
-                    // Contribution belongs to this user
                     {
                         $eq: [
                             "$user",
@@ -1629,7 +1711,6 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
                         ]
                     },
 
-                    // Only available contributions
                     {
                         $eq: [
                             "$isDataAvailable",
@@ -1676,19 +1757,10 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
 
                     pipeline: [
 
-                        // =====================================
-                        // Filter Contributions
-                        // =====================================
-
                         {
                             $match:
                                 contributionMatch
                         },
-
-
-                        // =====================================
-                        // Sort Newest Contribution Date First
-                        // =====================================
 
                         {
                             $sort: {
@@ -1717,6 +1789,36 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
                             "$contributions"
                     },
 
+                    totalParticipants: {
+
+                        $sum: {
+
+                            $map: {
+
+                                input:
+                                    "$contributions",
+
+                                as:
+                                    "contribution",
+
+                                in: {
+
+                                    $ifNull: [
+
+                                        "$$contribution.numberOfParticipants",
+
+                                        1
+
+                                    ]
+
+                                }
+
+                            }
+
+                        }
+
+                    },
+
                     totalContribution: {
 
                         $sum:
@@ -1732,8 +1834,6 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
             // =====================================
             // Sort Users
             // =====================================
-            // Users with User ID first,
-            // then User ID ascending
 
             {
                 $addFields: {
@@ -1759,6 +1859,7 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
                                     }
 
                                 ]
+
                             },
 
                             1,
@@ -1826,4 +1927,5 @@ module.exports.getAllUsersWithContributions = async (req, res) => {
         );
 
     }
+
 };

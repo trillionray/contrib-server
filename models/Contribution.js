@@ -2,18 +2,21 @@ const mongoose = require('mongoose');
 
 const contributionSchema = new mongoose.Schema({
 
+    
+    crNumber: {
+        type: String
+    },
+
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: [true, 'User is Required']
     },
-    crNumber: {
-        type: String
-    },
 
-    // =========================
-    // Contribution Date
-    // =========================
+    numberOfParticipants:{
+        type: Number,
+        default: 1
+    },
 
     date: {
         type: Date,
